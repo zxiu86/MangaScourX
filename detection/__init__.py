@@ -1,19 +1,28 @@
 """
-Detection subsystem - text and bubble detection.
+mangascourx - Advanced Multi-Scale Geometric-Aware Inpainting & Hybrid Text Detection
 """
 
-from .base import BaseDetector, validate_image
-from .detection import Detector
-from .mask import merge_labeled, merge_binary, cleanup_mask, process_masks
+from ._version import __version__
 
-# Bubbles subpackage
-from .bubbles import (
-    detect_bubbles,
-    clean_noise,
+from .core import (
+    euclidean_distance_transform,
+    connected_components,
+    structure_tensor,
+    perona_malik_diffusion,
+    curvature_diffusion,
+    PriorityQueue,
 )
 
-# Text subpackage
-from .text import (
+from .detection import (
+    BaseDetector,
+    Detector,
+    validate_image,
+    merge_labeled,
+    merge_binary,
+    cleanup_mask,
+    process_masks,
+    detect_bubbles,
+    clean_noise,
     detect_text_regions,
     stroke_width_transform,
     swt_to_mask,
@@ -21,28 +30,44 @@ from .text import (
     CRAFTDetector,
 )
 
+from .inpainting import (
+    Inpainter,
+    TeleaInpainter,
+    PatchMatchInpainter,
+    CoherenceTransport,
+)
+
+from .pipelines import (
+    MangaCleanPipeline,
+    TextRemovePipeline,
+)
+
 __all__ = [
-    # Base
+    "__version__",
+    "euclidean_distance_transform",
+    "connected_components",
+    "structure_tensor",
+    "perona_malik_diffusion",
+    "curvature_diffusion",
+    "PriorityQueue",
     "BaseDetector",
-    "validate_image",
-    
-    # Orchestrator
     "Detector",
-    
-    # Mask processing
+    "validate_image",
     "merge_labeled",
     "merge_binary",
     "cleanup_mask",
     "process_masks",
-    
-    # Bubbles
     "detect_bubbles",
     "clean_noise",
-    
-    # Text
     "detect_text_regions",
     "stroke_width_transform",
     "swt_to_mask",
     "group_swt_components",
     "CRAFTDetector",
+    "Inpainter",
+    "TeleaInpainter",
+    "PatchMatchInpainter",
+    "CoherenceTransport",
+    "MangaCleanPipeline",
+    "TextRemovePipeline",
 ]

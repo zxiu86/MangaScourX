@@ -19,3 +19,4 @@ __all__ = [
     "curvature_diffusion",
     "PriorityQueue",
 ]
+

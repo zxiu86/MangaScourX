@@ -1,7 +1,3 @@
-"""
-Inpainting subsystem - texture synthesis and restoration.
-"""
-
 from .base import Inpainter
 from .telea import TeleaInpainter
 from .coherence import CoherenceTransport
