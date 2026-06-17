@@ -25,11 +25,11 @@ import numpy as np
 from numpy.typing import NDArray
 
 # Project imports (adjust if your package structure differs)
-from bubbles.morphology import clean_noise
-from bubbles.contours import detect_bubbles
-from text.mser import detect_text_regions
-from text.craft_adapter import CRAFTDetector
-from masks import process_masks
+from .bubbles.morphology import clean_noise
+from .bubbles.contours import detect_bubbles
+from .text.mser import detect_text_regions
+from .text.craft_adapter import CRAFTDetector
+from .masks import process_masks
 
 logger = logging.getLogger(__name__)
 logger.addHandler(logging.NullHandler())

@@ -5,9 +5,9 @@ from numpy.typing import NDArray
 from typing import Dict, Any, Optional
 
 # استيراد شرطي المرور من المجلدات المتقفلة
-from MangaScourX.detection.detection import DetectionOrchestrator
-from MangaScourX.inpainting.patchmatch.engine import PatchMatchInpainter
-from MangaScourX.inpainting.telea import TeleaInpainter
+from .detection.detection import DetectionOrchestrator
+from .inpainting.patchmatch.engine import PatchMatchInpainter
+from .inpainting.telea import TeleaInpainter
 
 class TextRemovePipeline:
     """

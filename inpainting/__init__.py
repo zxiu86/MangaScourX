@@ -1,10 +1,15 @@
-# __init__.py for inpainting module
+"""
+Inpainting subsystem - texture synthesis and restoration.
+"""
+
 from .base import Inpainter
 from .telea import TeleaInpainter
-from .patchmatch.engine import PatchMatchInpainter
+from .coherence import CoherenceTransport
+from .patchmatch import PatchMatchInpainter
 
 __all__ = [
     "Inpainter",
     "TeleaInpainter",
-    "PatchMatchInpainter"
+    "CoherenceTransport",
+    "PatchMatchInpainter",
 ]

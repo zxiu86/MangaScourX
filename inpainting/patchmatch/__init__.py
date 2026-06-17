@@ -1,4 +1,9 @@
-# __init__.py for patchmatch module
+"""
+PatchMatch engine - multi-scale non-parametric texture synthesis.
+"""
+
 from .engine import PatchMatchInpainter
 
-__all__ = ["PatchMatchInpainter"]
+__all__ = [
+    "PatchMatchInpainter",
+]
