@@ -16,7 +16,7 @@ def get_version():
 def get_long_description():
     for path in ["README.md", "readme.md"]:
         if os.path.exists(path):
-            with open(path, "r", encoding="utf-8") as f:
+            with open(path, "r", encoding="utf-8", errors="ignore") as f:
                 return f.read()
     return "Advanced Multi-Scale PatchMatch & AI-Powered Text Removal Engine for Manga"
 
