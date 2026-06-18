@@ -1,334 +1,619 @@
-MangaScourX (v1.0.0) — Production-Grade Multi-Scale Geometric-Aware Inpainting & Hybrid Text Detection Architecture
+# mangascourx
 
- 1. EXECUTIVE SUMMARY & ARCHITECTURAL PHILOSOPHY
+![Version](https://img.shields.io/badge/version-1.0.2-blue.svg)
+![Python](https://img.shields.io/badge/python-3.8%2B-brightgreen.svg)
+![License](https://img.shields.io/badge/license-MIT-green.svg)
+![Status](https://img.shields.io/badge/status-Beta-orange.svg)
 
-`MangaScourX` is an industrial‑grade, highly optimized Python library tailored specifically for the automated localization, segmentation, and high‑fidelity geometric restoration of structural anomalies, speech bubbles, and text layers within stylized line art, specifically Japanese Manga and comic illustrations.
+**Advanced Multi-Scale PatchMatch & AI-Powered Text Removal Engine for Manga**
 
-Unlike generic image‑processing pipelines or standard convolutional neural network (CNN) inpainters that suffer from severe structural boundary degradation, high‑frequency aliasing, and catastrophic blurring on binary/halftone high‑contrast structures, `MangaScourX` implements a decoupled mathematical framework:
-
-1. **Hybrid Structural Localization Layer (Detection):**  
-   Synthesizes non‑parametric geometric feature tracking (Maximally Stable Extremal Regions - MSER, and Stroke Width Transform - SWT) with deep‑learning‑driven sequence awareness (Character‑Region Awareness for Text Detection - CRAFT) to isolate text bounding hulls without destroying background frame borders.
-
-2. 5D Generalized PatchMatch Resynthesizer (Inpainting):
-   An exact multi‑scale non‑local texture synthesis engine optimized via Numba‑driven LLVM compilation, capable of navigating a 5‑Dimensional search space—incorporating Subpixel Fractional Floating‑Point Translations $(X, Y)$, Continuous Orientation Rotation Matrices $(\theta)$, Scale Multipliers $(S)$, and Nearest‑Neighbor Fields ($K$‑NN).
+mangascourx هي مكتبة متقدمة متخصصة في **إزالة النصوص من صور المانجا** باستخدام تقنيات حديثة من مجال معالجة الصور والـ Computer Vision. تجمع بين خوارزميات كلاسيكية (PatchMatch، Telea) وتقنيات حديثة مدعومة بالـ AI (CRAFT للنصوص، MSER للكشف السريع).
 
 ---
 
-2. REPOSITORY HIERARCHY & SYSTEM TOPOLOGY
+## 📋 المحتويات
 
-The architectural system is strictly modularized into isolated components based on separating structural tracking contracts, deterministic numerical array mutation, and high‑level execution coordinators.
+- [الميزات الرئيسية](#الميزات-الرئيسية)
+- [المتطلبات](#المتطلبات)
+- [التثبيت](#التثبيت)
+- [الاستخدام السريع](#الاستخدام-السريع)
+- [الواجهة البرمجية](#الواجهة-البرمجية)
+- [البنية المعمارية](#البنية-المعمارية)
+- [السجل الكامل للإصدارات](#السجل-الكامل-للإصدارات)
+- [المساهمة](#المساهمة)
+- [الترخيص](#الترخيص)
 
+---
+
+## ✨ الميزات الرئيسية
+
+### 1. **الكشف الذكي للنصوص**
+- **MSER** (Maximally Stable Extremal Regions) — سريع، لا يحتاج AI
+- **CRAFT** (Character Region Awareness For Text detection) — دقيق، مدعوم بالشبكات العصبية
+- **Fallback تلقائي** — إذا اكتشف MSER عددًا قليلًا من النصوص، ينتقل تلقائيًا إلى CRAFT
+
+### 2. **كشف فقاعات الحوار**
+- بناءً على الكنتور والمورفولوجيا
+- معالجة متكيفة للأشكال المختلفة
+- تنظيف الضوضاء التلقائي
+
+### 3. **الإصلاح متعدد المستويات**
+- **PatchMatch** — خوارزمية fast-approximate nearest neighbor
+- **Coherence Transport** — نقل الملمس بناءً على تدفق الخطوط
+- **Telea Fast Marching** — ملء سريع باستخدام المسافات
+
+### 4. **الأداء العالي**
+- معالجة الصور بأحجام كبيرة
+- تحسينات JIT مع Numba
+- معالجة متوازية (عند توفر Numba)
+
+### 5. **مرونة التكوين**
+- معاملات قابلة للتخصيص لكل مرحلة
+- اختيار الخوارزمية حسب الاحتياجات
+- دعم معاينة النتائج المرحلية
+
+---
+
+## 📦 المتطلبات
+
+### النظام
+- **Python**: 3.8 أو أحدث
+- **نظام التشغيل**: Linux, macOS, Windows
+
+### المكتبات الأساسية
+```
+numpy >= 1.20.0
+opencv-python-headless >= 4.5.0
+scipy >= 1.7.0
 ```
 
-MangaScourX/
-│
-├── init.py                     # Global library gateway & public namespace exposition
-├── setup.py                        # Dependency matrices, architecture compilation configs
-│
-├── detection/                      # Text Tracking & Feature Extraction Subsystem
-│   ├── init.py
-│   ├── base.py                     # Strict ABC contracts for detection interfaces
-│   ├── detection.py                # Central Orchestrator & Fallback Coordinator
-│   ├── mask.py                     # Label alignment, conflict matrix, morphological consolidation
-│   │
-│   ├── bubbles/                    # Structural Bubble Geometry Trackers
-│   │   ├── contours.py             # Convex Hull extractions & topological filters
-│   │   └── morphology.py           # Multi-stage structuring binary morph operators
-│   │
-│   └── text/                       # Textual Content Segmentors
-│       ├── mser.py                 # Maximally Stable Extremal Regions (Non-AI Fast Track)
-│       ├── swt.py                  # Stroke Width Transform (Geometric stroke tracking)
-│       └── craft_adapter.py        # PyTorch CRAFT Deep Learning Adapter Layer
-│
-├── inpainting/                     # High-Fidelity Non-Local Texture Synthesizers
-│   ├── init.py
-│   ├── base.py                     # Strict Inpainter ABC signature blueprints
-│   ├── telea.py                    # Fast-Marching PDE-based propagation (Edge seed)
-│   ├── coherence.py                # Structure Tensor Coherence Transport (Directional drift)
-│   │
-│   └── patchmatch/                 # 5D Non-Parametric Patch Resynthesis Engine
-│       ├── init.py
-│       ├── core.py                 # XorShift32 RNG, Bilinear Sampling, Numba-compiled SSD
-│       ├── propagation.py          # Spatial/Geometric step propagation & Log-Random Search
-│       └── engine.py               # Multi-Scale NNF memory manager and execution pipeline
-│
-└── pipelines/                      # Monolithic Execution Controllers (Orchestration Traffic)
-├── init.py
-├── text_remove.py              # Decoupled Segment-then-Inpaint linear pipe
-└── manga_clean.py              # Clean-up pipeline (Adaptive Whitening + Despeckle)
-
+### خوارزميات متقدمة (اختيارية)
+```
+numba >= 0.53.0          # تحسين الأداء (جيد جداً)
+torch >= 1.9.0           # لـ CRAFT (لا يزال قيد التطوير)
+torchvision >= 0.10.0    # لـ CRAFT
 ```
 
 ---
 
-## 3. DEEP DIVE: DETECTION SUBSYSTEM (`detection/`)
+## 🚀 التثبيت
 
-### 3.1 `base.py` — Structural Contracts
-
-Implements the abstract contract base for all feature extractors. Every detection engine must subclass `BaseDetector`.
-
-```python
-from __future__ import annotations
-import abc
-import numpy as np
-from numpy.typing import NDArray
-
-class BaseDetector(abc.ABC):
-    def __init__(self, **kwargs) -> None:
-        self.config = kwargs
-
-    @abc.abstractmethod
-    def detect(self, image: NDArray[np.uint8]) -> NDArray[np.uint8]:
-        """Must return a strict binary mask of shape (H, W), dtype=np.uint8 (values: 0 or 255)"""
-        pass
+### من PyPI (الطريقة الموصى بها)
+```bash
+pip install mangascourx
 ```
 
-3.2 text/mser.py — Non‑AI Maximally Stable Extremal Regions
-
-MSER views an image as a topographic surface where intensity levels define watersheds. By thresholding the image continuously from $\alpha \in [0, 255]$, stable regions whose spatial area variant $\Delta(i) = |R_i - R_{i-\Delta}| / |R_i|$ drops below a mathematically defined strict local threshold are extracted.
-
-· Target Use‑Case: Ultra‑fast processing of high‑contrast standard typography (English/Japanese structural scan lines) without neural overhead.
-· Geometric Filtering: Extracted regions are subjected to strict component filters (area, aspect ratio, convexity) to retain only likely textual elements.
-
-3.3 text/swt.py — Stroke Width Transform (Epshtein et al.)
-
-Calculates the absolute physical width of text strokes by tracking the trajectory of image gradient vectors.
-
-1. Computes the Canny edge map of the grayscale image space.
-2. Computes the horizontal and vertical image gradients $(\nabla I_x, \nabla I_y)$ via Sobel kernels.
-3. For each edge pixel, traverses along the gradient vector $\mathbf{d} = \nabla I / \|\nabla I\|$ until hitting a corresponding counter‑edge with an opposing gradient vector direction ($\mathbf{d}_{target} \approx -\mathbf{d}$).
-4. The Euclidean distance between these boundaries defines the stroke width assigned to all intermediate elements. Elements with high variances in stroke thickness are heavily culled, preserving constant‑width textual strokes while omitting complex cross‑hatching.
-
-3.4 text/craft_adapter.py — Convolutional Character Awareness
-
-Wraps a deep convolutional neural network mapping two distinct spatial properties:
-
-· Region Score: The spatial probability that a pixel forms the center of a textual character.
-· Affinity Score: The spatial probability that space between characters belongs to the same semantic cluster, allowing vertical and horizontal line grouping.
-
-```
-[Input BGR] ──> [VGG16 U‑Net Backbone] ──> [Region Heatmap] ──┐
-                                          └── [Affinity Heatmap] ──┴──> [Watershed/Mask Conversion]
+### من GitHub (آخر إصدار تطوير)
+```bash
+pip install git+https://github.com/zxui86/mangascourx.git
 ```
 
-3.5 bubbles/contours.py & morphology.py
-
-Isolates elliptical or rectangular high‑contrast speech bubble boundaries using Suzuki‑Abe topological structural breakdown trees (cv2.RETR_EXTERNAL).
-
-· Bubble Selection Logic: Contours enclosing areas below a configured threshold or showing low circularity metrics are rejected.
-· Morphological Refinement: Applies an optimized structural matrix sequence to heal ink breakdowns (closing, dilation, erosion) and produce clean, closed bubble masks.
-
-3.6 mask.py & detection.py — The Traffic Orchestrator
-
-The central class DetectionOrchestrator implements an absolute fallback cascade mechanism to guarantee accurate results regardless of image variations. The following diagram illustrates the decision flow:
-
-```
-           [Input BGR Image]
-                   │
-         ┌─────────┴─────────┐
-         ▼                   ▼
-   [Run MSER]          [Run Bubble Contour]
-         │                   │
-  (Area Evaluation)          │
-         ▼                   ▼
-   Too Few Regions?          │
-   ├── YES ──> [CRAFT AI]    │
-   └── NO  ──> [Pass]        │
-         │                   │
-         └─────────┬─────────┘
-                   ▼
-         [Priority Matrix Blender]
-                   ▼
-       [Unified Clean Binary Mask]
+### من المصدر (للمساهمين)
+```bash
+git clone https://github.com/zxui86/mangascourx.git
+cd mangascourx
+pip install -e .
 ```
 
-Theoretical rationale:
-The cascade ensures that fast geometric methods (MSER, contours) are attempted first. When they yield insufficient regions (e.g., due to low contrast or complex backgrounds), the more computationally expensive CRAFT model is invoked. The Priority Matrix Blender then fuses all available masks, respecting a user‑defined priority to resolve conflicts (e.g., text masks take precedence over bubble masks). This hybrid strategy balances speed and robustness across diverse manga pages.
+### التثبيت مع الأدوات الاختيارية
+```bash
+# مع دعم numba الكامل (موصى به)
+pip install mangascourx[numba]
+
+# مع دعم CRAFT (يتطلب CUDA لـ GPU)
+pip install mangascourx[craft]
+
+# كل شيء
+pip install mangascourx[dev,numba,craft]
+```
 
 ---
 
-4. MATHEMATICAL FOUNDATION: INPAINTING SUBSYSTEM (inpainting/)
+## 💡 الاستخدام السريع
 
-4.1 telea.py — Partial Differential Equation Propagation
+### مثال بسيط — إزالة النصوص
 
-Alexandru Telea's non‑parametric Fast Marching Method (FMM) treats the binary mask boundary as a moving front defined via the Eikonal equation:
+```python
+import cv2
+from mangascourx import TextRemovePipeline
 
-|\nabla T| = 1 \quad \text{with} \quad T=0 \text{ on the boundary}
+# قراءة الصورة
+image = cv2.imread("manga_page.jpg")
 
-Pixels inside the missing area are processed strictly outward‑in according to their distance to known structures. The color value I(p) of an unknown pixel p is calculated as a normalized weighted integration of its neighborhood q \in B_\epsilon(p):
+# إنشاء خط أنابيب الإزالة
+pipeline = TextRemovePipeline(
+    inpainter_type="patchmatch",  # أو "telea" أو "coherence"
+    enable_bubbles=True,           # اكتشف فقاعات الحوار أيضاً
+    verbose=True
+)
 
-I(p) = \frac{\sum_{q} w(p,q) \, I(q)}{\sum_{q} w(p,q)}
+# معالجة الصورة
+result = pipeline.run(image)
 
-The weight components capture directional coherence and Euclidean layout distance:
+# حفظ النتيجة
+cv2.imwrite("output.jpg", result)
+```
 
-w(p,q) = w_{\text{dir}} \cdot w_{\text{dist}} \cdot w_{\text{level}}
+### مثال متقدم — مع تحكم دقيق
 
-4.2 coherence.py — Structure Tensor Coherence Transport
+```python
+from mangascourx import TextRemovePipeline
+from mangascourx.detection import DetectionOrchestrator
+from mangascourx.inpainting.patchmatch import PatchMatchInpainter
 
-Before structural pixel replacement, the local orientation of image gradients must be derived. This is mathematically achieved via the Structure Tensor (Second‑Moment Matrix):
+# 1. إنشاء كاشف النصوص مع إعدادات مخصصة
+detector = DetectionOrchestrator(
+    craft_model_path="path/to/craft_weights.pth",
+    device="cuda",  # أو "cpu"
+    mser_params={
+        "delta": 5,
+        "min_area": 30,
+        "max_area": 14400,
+    },
+    merge_priority=["text", "bubbles"],
+    final_cleanup=True,
+)
 
-J = K_\rho * \begin{pmatrix}
-I_x^2 & I_x I_y \\
-I_x I_y & I_y^2
-\end{pmatrix}
+# 2. إنشاء خوارزمية الإصلاح
+inpainter = PatchMatchInpainter(
+    patch_size=15,
+    num_levels=4,
+    num_iters=5,
+    k=5,
+)
 
-Where K_\rho represents a regularizing Gaussian smoothing kernel. Performing an eigendecomposition of matrix J yields eigenvalues \lambda_1 \ge \lambda_2 \ge 0.
+# 3. بناء خط الأنابيب الكامل
+pipeline = TextRemovePipeline(
+    detector=detector,
+    inpainter=inpainter,
+    verbose=True,
+)
 
-· The dominant eigenvector \mathbf{v}_1 points in the direction of maximum intensity change (normal to edges).
-· The subdominant eigenvector \mathbf{v}_2 specifies the exact vector orientation of continuous structural lines (coherence direction tangent to edges).
+# 4. معالجة الصورة
+result = pipeline.run(image)
+```
 
-The text removal pipeline propagates line tracking information along \mathbf{v}_2 into the center of the speech bubble mask, preventing the degradation of strong structural bounds.
+### الحصول على النتائج المرحلية
+
+```python
+# الحصول على قناع النصوص بدون إصلاح
+detection_result = detector.run(image)
+text_mask = detection_result["mask"]
+text_boxes = detection_result.get("text_boxes", [])
+
+# عرض النتائج
+import matplotlib.pyplot as plt
+
+fig, axes = plt.subplots(2, 2, figsize=(12, 10))
+
+axes[0, 0].imshow(cv2.cvtColor(image, cv2.COLOR_BGR2RGB))
+axes[0, 0].set_title("الصورة الأصلية")
+
+axes[0, 1].imshow(text_mask, cmap="gray")
+axes[0, 1].set_title("قناع النصوص")
+
+axes[1, 0].imshow(cv2.cvtColor(result, cv2.COLOR_BGR2RGB))
+axes[1, 0].set_title("بعد الإزالة")
+
+axes[1, 1].imshow(detection_result.get("bubble_mask", np.zeros_like(text_mask)), cmap="gray")
+axes[1, 1].set_title("قناع الفقاعات")
+
+for ax in axes.flat:
+    ax.axis("off")
+
+plt.tight_layout()
+plt.show()
+```
 
 ---
 
-5. GENERALIZED MULTI‑SCALE HYBRID 5D PATCHMATCH ENGINE (inpainting/patchmatch/)
+## 📚 الواجهة البرمجية
 
-The core texture synthesis module implements an industrial‑grade, multi‑scale Generalized PatchMatch algorithm optimized for high‑contrast line art and complex textures. Standard baseline PatchMatch variants resolve only a direct continuous spatial displacement vector \mathbf{f}(x,y) = (\Delta x, \Delta y). MangaScourX projects queries into a decoupled 5‑Dimensional parameter space to natively handle dynamic translation shifts, fractional subpixel spatial lookups, precomputed discrete rotation bounds, and multi‑scale isometric scaling maps.
+### `TextRemovePipeline`
 
-5.1 Comprehensive Mathematical Specification of the 5D State Vector
-
-For every coordinate point \mathbf{p} = (y, x) within the targeted degradation layer (mask region), the Nearest‑Neighbor Field (NNF) is explicitly modeled via the NNF state manager class. This component coordinates parallel high‑performance memory buffers mapping top K structural match configurations:
-
-\mathbf{\Phi}(y, x, k) = \left[ \mathcal{Y}_{\text{offset}}, \mathcal{X}_{\text{offset}}, \Theta_{\text{idx}}, \mathcal{S}_{\text{idx}}, \mathcal{C}_{\text{SSD}} \right]
-
-Where the components are structurally decoupled across low‑overhead scalar types:
-
-· \mathcal{Y}_{\text{offset}}, \mathcal{X}_{\text{offset}} \in \mathbb{R} (float32): High‑precision continuous floating‑point transformation tracking offsets mapping target elements back into valid source textures.
-· \Theta_{\text{idx}} \in \mathbb{Z} (int8): Discrete coordinate tracking index pointing directly to a slice inside the precomputed continuous rotation matrix repository ($\theta \in [-\pi, +\pi]$).
-· \mathcal{S}_{\text{idx}} \in \mathbb{Z} (int8): Discrete index tracking scale scaling multipliers inside the isometric dimension table ($S \in [0.5, 2.0]$).
-· \mathcal{C}_{\text{SSD}} \in \mathbb{R}^+ (float32): Objective match metric tracking score evaluating local similarity via an error‑weighted structural loss function.
-
-```
-+-----------------------------------------------------------------------------------------+
-|                                  NNF 5D STATE BOUNDS                                    |
-+------------------------------------+----------------------------------------------------+
-|  nnf_y / nnf_x                     | Continuous fractional source offsets (float32)     |
-|  rot_idx / scale_idx               | Precomputed index slices (int8)                    |
-|  nnf_cost                          | Sorted K-NN evaluation cost array (float32)        |
-+------------------------------------+----------------------------------------------------+
-```
-
-5.2 LLVM‑Compiled Low‑Level Array Architecture (core.py)
-
-To bypass high execution bottlenecks induced by Python's dynamic object model and pointer‑chasing lookups, all performance‑critical computational paths are bound to the hardware layer using Numba's strict native compilation engine (@njit(cache=True)).
-
-Exact Fractional Subpixel Bilinear Reconstruction Layer
-
-When evaluation passes request values under complex rotation \theta and scale S matrix shifts, coordinates mapped back to source domains resolve to fractional points. To avoid aliasing on crisp line art, values are derived dynamically via a highly optimized, boundary‑clamped bilinear sampler loop:
+**الفئة الرئيسية للعملية الكاملة**
 
 ```python
-@njit(cache=True)
-def sample_pixel(img, sy, sx):
-    h, w, c = img.shape
-    # Execute rigid physical boundaries preservation clamping
-    sy = min(max(sy, 0.0), h - 1e-6)
-    sx = min(max(sx, 0.0), w - 1e-6)
+pipeline = TextRemovePipeline(
+    inpainter_type="patchmatch",        # الخوارزمية: "patchmatch"، "telea"، "coherence"
+    detector_config=None,                # dict اختياري لإعدادات الكاشف
+    inpainter_config=None,               # dict اختياري لإعدادات الإصلاح
+    enable_text=True,                    # اكتشف النصوص
+    enable_bubbles=True,                 # اكتشف الفقاعات
+    verbose=False,                       # طباعة التفاصيل
+)
 
-    y0, x0 = int(sy), int(sx)
-    y1, x1 = min(y0 + 1, h - 1), min(x0 + 1, w - 1)
-
-    wy, wx = sy - y0, sx - x0
-    out = np.zeros(c, dtype=np.float32)
-
-    for ch in range(c):
-        out[ch] = (
-            (1.0 - wy) * (1.0 - wx) * img[y0, x0, ch] +
-            wy * (1.0 - wx) * img[y1, x0, ch] +
-            (1.0 - wy) * wx * img[y0, x1, ch] +
-            wy * wx * img[y1, x1, ch]
-        )
-    return out
+# الاستدعاء الرئيسي
+result = pipeline.run(image)
 ```
 
-Multi‑Channel Multi‑Feature Error Loss Metric
+### `DetectionOrchestrator`
 
-To guarantee visual continuity over complex screens and tones, the similarity cost function evaluates both localized pixel intensity deviations and gradient variations. The loss distance \mathcal{C}_{\text{SSD}} over a spatial patch domain \Omega = [-P_{\text{rad}}, P_{\text{rad}}]^2 is defined via a dual‑component objective function:
-
-\mathcal{C}_{\text{SSD}} = \sum_{\Omega} \| \mathcal{A}(\mathbf{p}) - \mathcal{A}(\mathbf{q}) \|^2 + \alpha \cdot \| \nabla \mathcal{A}(\mathbf{p}) - \nabla \mathcal{A}(\mathbf{q}) \|^2
-
-Where \mathcal{A} defines the precomputed transformation mapping lookup operation, \nabla \mathcal{A} represents the gradient field tensor error, and \alpha acts as the balancing weight parameter.
+**كاشف النصوص والفقاعات الموحد**
 
 ```python
-@njit(cache=True)
-def patch_ssd(img_pad, mask_pad, ty, tx, sy, sx, patch_size, worst_cost):
-    pad = patch_size // 2
-    c = img_pad.shape[2]
-    ssd = 0.0
-    
-    for i in range(patch_size):
-        for j in range(patch_size):
-            # Evaluate target coordinates offset
-            t_y_curr = ty + i
-            t_x_curr = tx + j
-            
-            # Source lookup maps to precalculated transformation indices
-            s_y_curr = sy - pad + i
-            s_x_curr = sx - pad + j
-            
-            for ch in range(c):
-                diff = img_pad[t_y_curr, t_x_curr, ch] - img_pad[int(s_y_curr), int(s_x_curr), ch]
-                ssd += diff * diff
-                
-            if i >= pad and ssd >= worst_cost:
-                return ssd # Early termination threshold branch
-    return ssd
+detector = DetectionOrchestrator(
+    craft_model_path=None,               # مسار نموذج CRAFT (اختياري)
+    device="cpu",                        # "cpu" أو "cuda"
+    mser_params={},                      # معاملات MSER
+    craft_params={},                     # معاملات CRAFT
+    bubble_params={},                    # معاملات الفقاعات
+    merge_priority=["text", "bubbles"],  # أولوية الدمج
+    final_cleanup=True,                  # تنظيف مورفولوجي نهائي
+    fallback_min_boxes=3,                # الحد الأدنى قبل الانتقال إلى CRAFT
+)
+
+result = detector.run(image, enable_text=True, enable_bubbles=True)
+# result["mask"]           — القناع الموحد
+# result["text_mask"]      — قناع النصوص فقط
+# result["bubble_mask"]    — قناع الفقاعات فقط
+# result["text_boxes"]     — قوائم المربعات النصية
+# result["bubble_boxes"]   — قوائم المربعات للفقاعات
 ```
 
-5.3 Advanced Spatial/Coherence Heuristic Propagation Layout (propagation.py)
+### خوارزميات الإصلاح
 
-The relaxation engine alternates between top‑left scanning loops (propagate_forward) and bottom‑right cycles (propagate_backward) to diffuse optimal structural values across space. This bidirectional sweep ensures that information can travel from any region of the image to any other, preventing directional bias.
+#### PatchMatchInpainter
+```python
+from mangascourx.inpainting.patchmatch import PatchMatchInpainter
+
+inpainter = PatchMatchInpainter(
+    patch_size=15,           # حجم الرقعة
+    num_levels=4,            # مستويات الهرم
+    num_iters=5,             # التكرارات لكل مستوى
+    k=5,                     # عدد أفضل المرشحين
+    random_search_radius=20, # نطاق البحث العشوائي
+    use_features=True,       # استخدم تدرجات اللون
+    verbose=False,
+)
+
+result = inpainter.run(image, mask)
+```
+
+#### TeleaInpainter
+```python
+from mangascourx.inpainting.telea import TeleaInpainter
+
+inpainter = TeleaInpainter(radius=5)
+result = inpainter.run(image, mask)
+```
+
+#### CoherenceTransport
+```python
+from mangascourx.inpainting.coherence import CoherenceTransport
+
+inpainter = CoherenceTransport(
+    num_iters=10,
+    step_size=0.1,
+)
+result = inpainter.run(image, mask)
+```
+
+---
+
+## 🏗️ البنية المعمارية
 
 ```
-Forward Sweep Scanline:           Backward Sweep Scanline:
-┌───────────┐   ┌───────────┐     ┌───────────┐   ┌───────────┐
-│ (y, x-1)  │──>│  (y, x)   │     │  (y, x)   │<──│ (y, x+1)  │
-└───────────┘   └───────────┘     └───────────┘   └───────────┘
-      │                                 ▲
-      ▼                                 │
-┌───────────┐                     ┌───────────┐
-│ (y-1, x)  │                     │ (y+1, x)  │
-└───────────┘                     └───────────┘
+mangascourx/
+├── __init__.py
+├── _version.py
+├── manga_clean.py              # خط أنابيب التنظيف الكامل
+├── text_remove.py              # خط أنابيب إزالة النصوص
+│
+├── detection/
+│   ├── __init__.py
+│   ├── detection.py            # DetectionOrchestrator
+│   ├── mask.py                 # معالجة القناع والدمج
+│   ├── bubbles/
+│   │   ├── contours.py         # كشف الكنتور
+│   │   └── morphology.py       # عمليات مورفولوجية
+│   └── text/
+│       ├── mser.py             # كشف MSER
+│       ├── craft_adapter.py    # محول CRAFT
+│       └── swt.py              # Stroke Width Transform
+│
+├── inpainting/
+│   ├── __init__.py
+│   ├── base.py                 # فئة Inpainter الأساسية
+│   ├── telea.py                # Fast Marching
+│   ├── coherence.py            # Coherence Transport
+│   └── patchmatch/
+│       ├── core.py             # العمليات الأساسية
+│       ├── engine.py           # محرك PatchMatch الرئيسي
+│       └── propagation.py      # الانتشار والبحث
+│
+└── core/
+    ├── distance.py             # تحويل المسافة
+    ├── components.py           # المكونات المتصلة
+    ├── tensor.py               # موتر الهيكل
+    ├── diffusion.py            # نشر Perona-Malik
+    ├── priority_queue.py       # قائمة الأولويات
+    └── etf.py                  # Edge Tangent Flow (مستقبلي)
 ```
 
-Theoretical rationale:
-During the forward pass, each pixel considers candidates from its left and upper neighbours; during the backward pass, it considers candidates from its right and lower neighbours. This two‑phase propagation mimics the behaviour of dynamic programming and allows the NNF to converge more quickly to a global optimum. Additionally, because the search space includes rotations and scales, propagating these high‑dimensional parameters directly ensures that geometric variations are smoothly transferred across the image domain.
+---
 
-Spatial Translation Diffusion Logic
+## 📝 السجل الكامل للإصدارات
 
-When evaluating the left spatial neighbour (y, x-1), its optimal candidate offset vector is systematically tested for the current element (y, x). If the neighbour's error performance ranks higher than the worst element in the target's current K‑NN pool, the state matrix updates via sorted‑insertion shifts handled by update_knn and sort_knn_row:
+### v1.0.2 (الإصدار الحالي) — إصلاح حرج ⚠️
+
+**تاريخ الإصدار:** يناير 2025
+
+#### المشاكل المُصححة الحرجة
+
+| # | المشكلة | التأثير | الحل |
+|---|--------|--------|------|
+| 1 | `ModuleNotFoundError: No module named 'mangascourx'` | لا يمكن تثبيت/استيراد المكتبة | إعادة هيكلة المشروع — كل الملفات داخل `mangascourx/` |
+| 2 | 5 ملفات `__init__.py` مفقودة | الاستيراد المتسلسل يفشل | إنشاء جميع `__init__.py` مع الواردات الصحيحة |
+| 3 | اسم الفئة: `Detector` vs `DetectionOrchestrator` | استيراد خاطئ من `text_remove.py` | توحيد الأسماء، إضافة `Detector` كمرادف |
+| 4 | اسم الدالة: `.detect()` vs `.run()` | استدعاء غير موجود | إضافة `.run()` كـ wrapper لـ `.detect()` |
+| 5 | استيراد خاطئ: `from .masks import` | الملف هو `mask.py` ليس `masks.py` | تصحيح اسم الاستيراد |
+| 6 | `inpainting/base.py` مفقود تماماً | `Inpainter` class غير موجود | إنشاء الفئة الأساسية مع `_find_boundary()` و `_propagate()` |
+| 7 | `_find_boundary()` و `_propagate()` غير معرّفة | استدعاء خطأ في runtime | نقل الدوال إلى `Inpainter` base class |
+| 8 | خطأ تمرير `mser_params` | `detect_text_regions()` يرفع exception | تغيير من `**self.mser_params` إلى `mser_params=self.mser_params` |
+| 9 | بدون fallback numba في `propagation.py` | انهيار إذا لم يكن numba مثبتاً | إضافة try/except و mock functions |
+| 10 | مسار نسبي في `setup.py` لـ `_version.py` | فشل التثبيت من مجلدات مختلفة | استخدام `os.path.abspath()` |
+
+#### ملفات جديدة
+
+- ✅ `mangascourx/__init__.py` — حزمة رئيسية
+- ✅ `mangascourx/detection/__init__.py` — حزمة الكشف
+- ✅ `mangascourx/detection/detection.py` — `DetectionOrchestrator` (معاد كتابة)
+- ✅ `mangascourx/detection/text/__init__.py` — حزمة كشف النصوص
+- ✅ `mangascourx/detection/bubbles/__init__.py` — حزمة كشف الفقاعات
+- ✅ `mangascourx/detection/bubbles/contours.py` — Contour detection
+- ✅ `mangascourx/detection/bubbles/morphology.py` — Morphological ops
+- ✅ `mangascourx/inpainting/__init__.py` — حزمة الإصلاح
+- ✅ `mangascourx/inpainting/base.py` — `Inpainter` base class (جديد تماماً)
+- ✅ `mangascourx/inpainting/patchmatch/__init__.py` — حزمة PatchMatch
+- ✅ `mangascourx/inpainting/telea.py` — معاد كتابة مع الملفات الأساسية
+- ✅ `mangascourx/core/__init__.py` — حزمة الأدوات الأساسية
+
+#### ملفات معاد كتابتها
+
+- 🔧 `setup.py` — معالجة آمنة للمسارات + معاملات محسّنة
+- 🔧 `detection.py` → `detection/detection.py` — كاشف موحد محسّن
+- 🔧 `telea.py` → `inpainting/telea.py` — استيراد صحيح
+- 🔧 `propagation.py` → `inpainting/patchmatch/propagation.py` — numba fallback
+
+#### التغييرات الهيكلية
+
+**السابق (معطل):**
+```
+repo/
+├── core/              ← في الجذر
+├── detection/         ← في الجذر
+├── inpainting/        ← في الجذر
+├── setup.py
+└── ... ملفات أخرى
+```
+
+**الحالي (صحيح):**
+```
+repo/
+├── setup.py
+└── mangascourx/       ← مجلد الحزمة الموحد
+    ├── core/
+    ├── detection/
+    ├── inpainting/
+    └── ... جميع الملفات
+```
+
+#### الاختبار
+
+```bash
+# اختبر التثبيت
+pip install -e .
+
+# اختبر الاستيراد
+python -c "import mangascourx; print(mangascourx.__version__)"
+# الإخراج المتوقع: 1.0.2
+
+# اختبر الخوارزميات
+from mangascourx import TextRemovePipeline
+from mangascourx.detection import DetectionOrchestrator
+from mangascourx.inpainting.telea import TeleaInpainter
+# بدون أخطاء ✅
+```
+
+---
+
+### v1.0.1 (السابق) — ثبات أولي
+
+- إضافة MSER و CRAFT
+- دعم PatchMatch و Telea
+- كشف الفقاعات الأساسي
+
+### v1.0.0 (الأول) — الإطلاق الأولي
+
+- هيكل أساسي
+- معالجة الصور
+
+---
+
+## 🔧 الاستكشاف والإصلاح
+
+### المشكلة: `ImportError: No module named 'mangascourx.detection'`
+
+**الحل:**
+```bash
+# 1. تحقق من الهيكل
+python -c "import mangascourx; print(dir(mangascourx))"
+
+# 2. أعد تثبيت الحزمة
+pip install --force-reinstall --no-deps mangascourx
+
+# 3. امسح الذاكرة المؤقتة
+find . -type d -name __pycache__ -exec rm -r {} +
+pip cache purge
+```
+
+### المشكلة: `ModuleNotFoundError: No module named 'numba'`
+
+**الحل:** numba اختياري. المكتبة تعمل بدونه (أبطأ):
+```python
+# لا حاجة للتثبيت؛ المكتبة لديها fallback
+from mangascourx import TextRemovePipeline
+pipeline = TextRemovePipeline()  # يعمل بدون numba
+```
+
+### المشكلة: `CUDA out of memory` مع CRAFT
+
+**الحل:**
+```python
+detector = DetectionOrchestrator(
+    device="cpu",  # استخدم CPU بدلاً من CUDA
+    craft_model_path="path/to/weights.pth"
+)
+```
+
+---
+
+## 📖 الأمثلة الإضافية
+
+### معالجة عدة صور
 
 ```python
-@njit(cache=True, parallel=False)
-def propagate_forward(img_pad, mask_pad, abs_y, abs_x, cost, h, w, patch_size, k):
-    pad = patch_size // 2
-    for y in range(h):
-        for x in range(w):
-            if not mask_pad[y + pad, x + pad]:
-                continue # Element resides in known unmasked territory
-                
-            # Query Left Neighbor Spatial Candidate Profile
-            if x > 0:
-                for i in range(k):
-                    sy = abs_y[y, x - 1, i]
-                    sx = abs_x[y, x - 1, i]
-                    cst = cost[y, x - 1, i]
-                    
-                    # Direct worst‑cost boundary validation layer
-                    if cst < cost[y, x, -1]:
-                        abs_y[y, x, -1] = sy
-                        abs_x[y, x, -1] = sx
-                        cost[y, x, -1] = cst
-                        # Execute linear binary sort over array slices
-                        _sort_row_slice(abs_y, abs_x, cost, y, x, k)
+import os
+import cv2
+from mangascourx import TextRemovePipeline
+
+pipeline = TextRemovePipeline(verbose=True)
+
+input_dir = "manga_pages/"
+output_dir = "cleaned_pages/"
+
+os.makedirs(output_dir, exist_ok=True)
+
+for filename in sorted(os.listdir(input_dir)):
+    if filename.endswith((".jpg", ".png")):
+        input_path = os.path.join(input_dir, filename)
+        output_path = os.path.join(output_dir, filename)
+        
+        image = cv2.imread(input_path)
+        result = pipeline.run(image)
+        cv2.imwrite(output_path, result)
+        print(f"✓ معالجة: {filename}")
 ```
 
-Dual‑Path Decoupled Optimization Engines
+### ضبط الأداء حسب الجودة
 
-Beyond standard spatial propagation passes, MangaScourX runs two distinct optimization searches to handle complex structures:
+```python
+from mangascourx import TextRemovePipeline
 
-1. Coherence Vector Field Transport (coherence_search):
-      Evaluates texture candidates along derived structural paths (isophote alignments) extracted via localized second‑moment matrices. This prevents structural lines from washing out or breaking across text bubble boundaries.
-2. Bidirectional Constraint Heuristic (bidirectional_heuristic):
+# للسرعة القصوى (جودة أقل)
+fast_pipeline = TextRemovePipeline(
+    inpainter_type="telea",
+    detector_config={
+        "final_cleanup": False,
+        "fallback_min_boxes": 10,  # تقليل البحث عن CRAFT
+    }
+)
+
+# للجودة العالية (أبطأ)
+quality_pipeline = TextRemovePipeline(
+    inpainter_type="patchmatch",
+    detector_config={
+        "final_cleanup": True,
+        "fallback_min_boxes": 3,
+    },
+    inpainter_config={
+        "num_levels": 5,
+        "num_iters": 8,
+        "k": 8,
+    }
+)
+```
+
+---
+
+## 🤝 المساهمة
+
+نرحب بالمساهمات! الخطوات:
+
+1. **Fork** المستودع
+2. **Create a feature branch** — `git checkout -b feature/amazing-feature`
+3. **Commit changes** — `git commit -m "Add amazing feature"`
+4. **Push to branch** — `git push origin feature/amazing-feature`
+5. **Open Pull Request**
+
+### إرشادات التطوير
+
+```bash
+# تثبيت مع أدوات التطوير
+pip install -e ".[dev]"
+
+# تشغيل الاختبارات
+pytest tests/
+
+# التحقق من الكود
+flake8 mangascourx/
+black mangascourx/
+```
+
+---
+
+## 📄 الترخيص
+
+هذا المشروع مرخص تحت **MIT License** — انظر [LICENSE](LICENSE) للتفاصيل.
+
+---
+
+## 👤 المؤلف
+
+**Zaid (الـ Coach / Zizo)**
+
+- GitHub: [@zxui86](https://github.com/zxui86)
+- Email: zly30257@gmail.com
+
+---
+
+## 🙏 شكر وتقدير
+
+شكر خاص لـ:
+- **OpenCV** — معالجة الصور
+- **NumPy & SciPy** — الحسابات العددية
+- **Numba** — تسريع JIT
+- **CRAFT** — كشف النصوص المتقدم
+- مجتمع معالجة الصور المفتوح المصدر
+
+---
+
+## 📞 التواصل والدعم
+
+- **Issues**: [GitHub Issues](https://github.com/zxui86/mangascourx/issues)
+- **Discussions**: [GitHub Discussions](https://github.com/zxui86/mangascourx/discussions)
+- **Email**: zly30257@gmail.com
+
+---
+
+## 🗺️ الخارطة المستقبلية
+
+- [ ] دعم الفيديو (معالجة الإطارات المتسلسلة)
+- [ ] نموذج AI خاص لكشف النصوص في المانجا
+- [ ] واجهة رسومية بسيطة (PyQt/Tkinter)
+- [ ] دعم معالجة الدفعات (batch processing)
+- [ ] تحسينات الأداء على GPU
+- [ ] توثيق شامل مع فيديوهات تعليمية
+
+---
+
+## 📊 الإحصائيات
+
+- **الملفات**: 30+ ملف Python
+- **الأسطر الكود**: 5000+ سطر
+- **الخوارزميات**: 5+ خوارزميات إصلاح متقدمة
+- **المدعومة**: Python 3.8+، Linux/macOS/Windows
+
+---
+
+**آخر تحديث:** يناير 2025
+
+**الإصدار الحالي:** 1.0.4(مستقر ✅)
+
+**الحالة:** Beta (جاهز للإنتاج مع اختبار شامل)
+
+l Constraint Heuristic (bidirectional_heuristic):
       Evaluates inverse match profiles by mapping source lookups back to target regions. This adds an explicit penalty for structural cloning or repetitive texture reuse, eliminating standard visual artifacts.
 
 5.4 Logarithmic Random Exploration Layer
