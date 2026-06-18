@@ -331,6 +331,53 @@ def draw_swt_boxes(
     Returns:
         Image with drawn boxes.
     """
+
+def detect_text_swt(
+    gray: NDArray[np.uint8],
+    edge_low: float = 50.0,
+    edge_high: float = 150.0,
+    max_stroke_width: int = 70,
+    min_stroke: int = 3,
+    max_stroke: int = 40,
+    variance_threshold: float = 2.0,
+    area_min: int = 30,
+) -> tuple[NDArray[np.uint8], list[tuple[int, int, int, int]], NDArray[np.float32]]:
+    """
+    Complete text detection pipeline using Stroke Width Transform.
+    
+    This is a convenience function that wraps the full SWT pipeline:
+    1. Compute SWT map
+    2. Threshold to get text mask
+    3. Extract connected components as text candidates
+    
+    Args:
+        gray: Grayscale input image (uint8)
+        edge_low: Canny low threshold
+        edge_high: Canny high threshold
+        max_stroke_width: Maximum stroke width to search
+        min_stroke: Minimum stroke width for text
+        max_stroke: Maximum stroke width for text
+        variance_threshold: Max allowed stroke width variance in component
+        area_min: Minimum component area in pixels
+    
+    Returns:
+        Tuple of (binary_mask, bounding_boxes, swt_map)
+    """
+    # Compute SWT
+    swt_map = stroke_width_transform(
+        gray, edge_low, edge_high, max_stroke_width
+    )
+    
+    # Get binary mask
+    mask = swt_to_mask(swt_map, min_stroke, max_stroke)
+    
+    # Get candidate boxes
+    boxes = group_swt_components(
+        swt_map, min_stroke, max_stroke, variance_threshold, area_min
+    )
+    
+    return mask, boxes, swt_map
+    
     out = image if inplace else image.copy()
     for x, y, w, h in boxes:
         cv2.rectangle(out, (x, y), (x + w, y + h), color, thickness)
